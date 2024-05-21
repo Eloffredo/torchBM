@@ -334,6 +334,30 @@ class BM():
         self.couplings[torch.arange(self.N), torch.arange(self.N)] *= 0 ### set diagonal to zero
         
         self.fantasy_fields_eff = self.compute_output(self.fantasy_x, self.couplings) + self.fields[None]
+
+    def gen_data(self, N_data = 1000, n_iter = 100, Nthermalize=100, Nstep=10, beta=1, reshape = True):
+
+        config = self.sample_from_inputs( torch.zeros([N_data, self.N, self.n_c],dtype = torch.int32), beta=0)
+        
+        for _ in range(Nthermalize):
+            config = self.markov_step(config, beta )
+
+        new_samples = torch.zeros( size = (n_iter, N_data, self.N) ,dtype = torch.int32 )
+        
+        for i in tqdm(range(n_iter)):
+            for _ in range(Nstep):
+                config = self.markov_step( config, beta)
+
+            new_samples[i] = config[0].detach().clone()
+
+        if reshape:
+            new_samples = new_samples.reshape(N_data*n_iter, -1)
+
+        return new_samples
+
+        
+        
+            
             
             
                 
