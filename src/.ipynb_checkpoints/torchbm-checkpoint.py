@@ -21,11 +21,6 @@ class BM():
         self.gauge = gauge
         self.zero_field = zero_field
 
-        #super(BM, self).__init__(n_layers=1, layers_size=[self.N], layers_nature=[
-        #    self.nature + '_coupled'], layers_n_c=[self.n_c], layers_name=['layer'])
-
-        #self.layer = layer.initLayer(N=self.N, nature=self.nature + '_coupled', position='visible',
-        #                             n_c=self.n_c, random_state=self.random_state, zero_field=self.zero_field, gauge=self.gauge)
         if init_couplings:
             self.init_couplings(0.01)
 
@@ -84,46 +79,6 @@ class BM():
             coupling_grad -= l1 * torch.sign(self.couplings)
             
         return (field_grad, coupling_grad)
-
-
-    def internal_gradients(self, data_pos, data_neg, l1=0, l2=0, data_0=None, weights=None, weights_neg=None, weights_0=None,
-                           value='data', value_neg='data', value_0='input'):
-        gradient = {}
-        if value == 'moments':
-            moments_pos = data_pos
-        else:
-            moments_pos = self.get_moments(
-                data_pos,  value=value, weights=weights, beta=1)
-        if value_neg == 'moments':
-            moments_neg = data_neg
-        else:
-            moments_neg = self.get_moments(
-                data_neg,  value=value_neg, weights=weights_neg, beta=1)
-            
-        if weights is not None:
-            mean_weights = weights.mean()
-        else:
-            mean_weights = 1.
-
-        if self.target0 == 'pos':
-            print('wannabe')
-            self._target_moments0 = moments_pos
-            self._mean_weight0 = mean_weights
-        else:
-            print('wannabe2')
-            self._target_moments0 = moments_neg
-            self._mean_weight0 = 1.
-
-        for k, key in enumerate(self.list_params):
-            gradient[key] = mean_weights * self.factors[k] * \
-                (moments_pos[k] - moments_neg[k])
-
-        if l2 > 0:
-            gradients['couplings'] -= l2 * self.couplings
-        if l1 > 0:
-            gradients['couplings'] -= l1 * torch.sign(self.couplings)
-            
-        return gradients  
 
     def compute_output(self, config, couplings, direction='up', out=None):
         #assert (self.n_c > 1) & (couplings.ndim == 4)  # output layer is Potts
@@ -195,15 +150,8 @@ class BM():
         if fields_eff is None:
             fields_eff = self.fields.unsqueeze(dim=0) + self.compute_output(x, self.couplings)
             
-            ###TO MODIFY with the correct one
-        if I is not None:
-            x, fields_eff = utils.Potts_sampling( x, fields_eff, B, self.N, self.n_c, self.fields0.repeat( (fields_eff.shape[0],1,1) ), self.couplings, beta )
+        x, fields_eff = utils.Potts_sampling( x, fields_eff, B, self.N, self.n_c, self.fields0.repeat( (fields_eff.shape[0],1,1) ), self.couplings, beta )
             
-            #### here Jerome puts the function Potts Gibbs input C __ and adds I as input, but never used!!!!
-        else:
-            x, fields_eff = utils.Potts_sampling( x, fields_eff, B, self.N, self.n_c, self.fields0.repeat( (fields_eff.shape[0],1,1) ), self.couplings, beta )
-            
-            #### Potts_sampling here is equivalent to Pott_Gibbs_free_C
         return (x, fields_eff)
     
     def markov_step(self, config, beta=1):
